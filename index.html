@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TaskFlow Focus - 할 일 관리와 뽀모도로 타이머가 완벽하게 결합된 모던 생산성 웹 애플리케이션">
+  <title>TaskFlow Focus | 몰입형 뽀모도로 투두리스트</title>
+  
+  <!-- Google Fonts: Outfit & Inter & Pretendard -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-dark">
+  <div id="app" class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-logo">
+          <span class="logo-icon"><i data-lucide="hourglass"></i></span>
+          <div class="logo-text">
+            <span class="logo-title">TaskFlow</span>
+            <span class="logo-badge">FOCUS</span>
+          </div>
+        </div>
+        <div class="date-display" id="currentDateDisplay">2026년 10월 30일 금요일</div>
+      </div>
+
+      <!-- Quick Productivity Stats -->
+      <div class="header-stats">
+        <div class="stat-pill" title="오늘의 할 일 달성률">
+          <i data-lucide="check-circle-2" class="stat-icon emerald"></i>
+          <span class="stat-label">달성률</span>
+          <span class="stat-value" id="headerCompletionRate">0%</span>
+          <div class="stat-bar-mini">
+            <div class="stat-bar-fill" id="headerProgressBar" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="stat-pill" title="오늘 완료한 총 뽀모도로 세션 및 집중 시간">
+          <i data-lucide="flame" class="stat-icon coral"></i>
+          <span class="stat-label">집중 시간</span>
+          <span class="stat-value" id="headerFocusTime">0분</span>
+          <span class="pomo-count-tag" id="headerPomoCount">🍅 0</span>
+        </div>
+      </div>
+
+      <!-- Header Controls -->
+      <div class="header-actions">
+        <button id="themeToggleBtn" class="btn-icon" title="다크/라이트 모드 전환" aria-label="테마 전환">
+          <i data-lucide="sun" class="sun-icon"></i>
+          <i data-lucide="moon" class="moon-icon"></i>
+        </button>
+        <button id="openSettingsBtn" class="btn-icon" title="뽀모도로 및 앱 설정" aria-label="설정 열기">
+          <i data-lucide="settings"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div class="workspace-body">
+      
+      <!-- Left Sidebar: Filters & Categories -->
+      <aside class="app-sidebar" id="appSidebar">
+        <!-- Mobile Sidebar Close -->
+        <div class="sidebar-mobile-header">
+          <span class="sidebar-title">메뉴 & 필터</span>
+          <button id="closeSidebarBtn" class="btn-icon btn-sm"><i data-lucide="x"></i></button>
+        </div>
+
+        <!-- Smart Views -->
+        <div class="nav-section">
+          <div class="section-title">스마트 필터</div>
+          <ul class="nav-list" id="filterNavList">
+            <li class="nav-item active" data-filter="all">
+              <span class="nav-icon"><i data-lucide="inbox"></i></span>
+              <span class="nav-text">전체 할 일</span>
+              <span class="nav-badge" id="countAll">0</span>
+            </li>
+            <li class="nav-item" data-filter="today">
+              <span class="nav-icon today-icon"><i data-lucide="sun-medium"></i></span>
+              <span class="nav-text">오늘 할 일</span>
+              <span class="nav-badge" id="countToday">0</span>
+            </li>
+            <li class="nav-item" data-filter="important">
+              <span class="nav-icon star-icon"><i data-lucide="star"></i></span>
+              <span class="nav-text">중요 작업</span>
+              <span class="nav-badge" id="countImportant">0</span>
+            </li>
+            <li class="nav-item" data-filter="pomo">
+              <span class="nav-icon pomo-icon"><i data-lucide="hourglass"></i></span>
+              <span class="nav-text">뽀모도로 진행 중</span>
+              <span class="nav-badge" id="countPomo">0</span>
+            </li>
+            <li class="nav-item" data-filter="completed">
+              <span class="nav-icon check-icon"><i data-lucide="check-check"></i></span>
+              <span class="nav-text">완료됨</span>
+              <span class="nav-badge" id="countCompleted">0</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Categories / Tags -->
+        <div class="nav-section">
+          <div class="section-title-wrap">
+            <span class="section-title">카테고리</span>
+            <button id="addCategoryBtn" class="btn-text-action" title="카테고리 추가">+ 추가</button>
+          </div>
+          <ul class="nav-list category-list" id="categoryNavList">
+            <!-- Dynamic Category Items -->
+          </ul>
+        </div>
+
+        <!-- Quick Pomodoro Stats Box -->
+        <div class="sidebar-quote-card">
+          <div class="quote-header">
+            <i data-lucide="sparkles" class="sparkle-icon"></i>
+            <span>오늘의 몰입 팁</span>
+          </div>
+          <p class="quote-body" id="dailyTipText">"딱 25분만 몰입해 보세요. 시작하는 순간 미루던 일의 80%는 이미 해결됩니다."</p>
+        </div>
+      </aside>
+
+      <!-- Main Content Feed Area -->
+      <main class="app-main-content">
+        
+        <!-- Mobile Header Bar -->
+        <div class="mobile-nav-bar">
+          <button id="mobileMenuBtn" class="btn-icon" aria-label="메뉴 열기">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="mobile-title" id="mobileCurrentFilterTitle">전체 할 일</div>
+          <button id="mobileAddBtn" class="btn-icon-coral" aria-label="빠른 할 일 추가">
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+
+        <!-- Task Creation Quick Input Card -->
+        <section class="task-create-section">
+          <form id="taskCreateForm" class="task-input-box">
+            <div class="input-primary-row">
+              <div class="input-checkbox-mock"><i data-lucide="plus"></i></div>
+              <input 
+                type="text" 
+                id="taskTitleInput" 
+                class="main-text-input" 
+                placeholder="오늘 완료할 새로운 할 일을 입력하세요... (Enter 키로 빠른 추가)" 
+                required 
+                autocomplete="off"
+              >
+              <button type="submit" class="btn-create-submit" id="createTaskSubmitBtn">
+                <span>등록</span>
+                <i data-lucide="arrow-right"></i>
+              </button>
+            </div>
+
+            <!-- Input Options Bar (Priority, Category, DueDate, Pomodoros) -->
+            <div class="input-options-row">
+              <!-- Priority Selector -->
+              <div class="option-pill-dropdown">
+                <label for="newPrioritySelect" class="option-label"><i data-lucide="flag"></i> 우선순위:</label>
+                <select id="newPrioritySelect" class="styled-select">
+                  <option value="medium" selected>보통 (Medium)</option>
+                  <option value="high">긴급 (High) 🔥</option>
+                  <option value="low">낮음 (Low)</option>
+                </select>
+              </div>
+
+              <!-- Category Selector -->
+              <div class="option-pill-dropdown">
+                <label for="newCategorySelect" class="option-label"><i data-lucide="folder"></i> 카테고리:</label>
+                <select id="newCategorySelect" class="styled-select">
+                  <!-- Dynamic Categories -->
+                </select>
+              </div>
+
+              <!-- Target Pomodoro Sessions -->
+              <div class="option-pill-dropdown">
+                <label for="newTargetPomoSelect" class="option-label"><i data-lucide="timer"></i> 목표 뽀모도로:</label>
+                <select id="newTargetPomoSelect" class="styled-select">
+                  <option value="1">🍅 1개 (25분)</option>
+                  <option value="2" selected>🍅 2개 (50분)</option>
+                  <option value="3">🍅 3개 (75분)</option>
+                  <option value="4">🍅 4개 (100분)</option>
+                  <option value="6">🍅 6개 (150분)</option>
+                </select>
+              </div>
+
+              <!-- Due Date Picker -->
+              <div class="option-pill-dropdown">
+                <label for="newDueDateInput" class="option-label"><i data-lucide="calendar"></i> 마감일:</label>
+                <input type="date" id="newDueDateInput" class="styled-date-input">
+              </div>
+            </div>
+          </form>
+        </section>
+
+        <!-- Task List Toolbar: Search & Filter Tabs & Clear Completed -->
+        <section class="task-toolbar">
+          <div class="toolbar-left">
+            <h1 class="current-view-title" id="currentViewTitle">전체 할 일</h1>
+            <span class="task-counter" id="taskTotalCounter">0개의 할 일</span>
+          </div>
+
+          <div class="toolbar-right">
+            <!-- Search Input -->
+            <div class="search-box">
+              <i data-lucide="search" class="search-icon"></i>
+              <input type="text" id="taskSearchInput" placeholder="할 일 검색..." class="search-input">
+              <button id="clearSearchBtn" class="clear-search-btn hide" aria-label="검색 지우기"><i data-lucide="x"></i></button>
+            </div>
+
+            <!-- Sort Selector -->
+            <div class="sort-box">
+              <select id="taskSortSelect" class="styled-select" title="정렬 기준">
+                <option value="order">기본 순서</option>
+                <option value="priority">우선순위 높은 순</option>
+                <option value="dueDate">마감일 임박 순</option>
+                <option value="pomo">뽀모도로 많은 순</option>
+                <option value="title">이름순</option>
+              </select>
+            </div>
+
+            <!-- Clear Completed Button -->
+            <button id="clearCompletedBtn" class="btn-secondary-sm" title="완료된 할 일 모두 비우기">
+              <i data-lucide="trash-2"></i>
+              <span>완료 정리</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Tasks Feed Container -->
+        <section class="tasks-feed-container" id="tasksFeedContainer">
+          <!-- Dynamic Task Cards Rendered Here -->
+        </section>
+
+        <!-- Empty State UI -->
+        <div class="empty-state hide" id="emptyStateContainer">
+          <div class="empty-icon-box">
+            <i data-lucide="check-circle" class="empty-main-icon"></i>
+          </div>
+          <h3 class="empty-title" id="emptyStateTitle">할 일이 없습니다</h3>
+          <p class="empty-desc" id="emptyStateDesc">새로운 할 일을 추가하고 뽀모도로 포커스로 시간을 알차게 보내보세요!</p>
+          <button id="emptyAddBtn" class="btn-primary-coral">
+            <i data-lucide="plus"></i>
+            <span>첫 할 일 등록하기</span>
+          </button>
+        </div>
+
+      </main>
+    </div>
+
+    <!-- Floating Mini Pomodoro Player (Shown when timer is running and Zen mode is minimized) -->
+    <div class="mini-pomodoro-player hide" id="miniPomoPlayer">
+      <div class="mini-player-status-dot pulse"></div>
+      <div class="mini-player-info">
+        <span class="mini-session-type" id="miniSessionType">집중 세션</span>
+        <span class="mini-task-title" id="miniTaskTitle">작업명</span>
+      </div>
+      <div class="mini-timer-display" id="miniTimerDisplay">25:00</div>
+      <div class="mini-player-controls">
+        <button id="miniToggleBtn" class="btn-mini-action" title="일시정지/재생" aria-label="일시정지"><i data-lucide="pause"></i></button>
+        <button id="miniMaximizeBtn" class="btn-mini-action" title="집중 모드로 화면 확대" aria-label="집중 모드"><i data-lucide="maximize-2"></i></button>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- [화면 2] 뽀모도로 몰입 집중 뷰 (Zen Focus Mode Screen Overlay) -->
+    <!-- ============================================================ -->
+    <div class="zen-focus-overlay hide" id="zenFocusOverlay">
+      <div class="zen-ambient-glow" id="zenAmbientGlow"></div>
+
+      <!-- Zen Top Bar -->
+      <div class="zen-top-bar">
+        <div class="zen-brand">
+          <i data-lucide="timer" class="coral-glow"></i>
+          <span>Zen Focus Mode</span>
+        </div>
+        <div class="zen-actions">
+          <button id="zenSoundToggleBtn" class="btn-zen-icon" title="알림 사운드 토글">
+            <i data-lucide="volume-2" id="zenSoundIcon"></i>
+          </button>
+          <button id="zenMinimizeBtn" class="btn-zen-icon" title="할 일 목록으로 최소화">
+            <i data-lucide="minimize-2"></i>
+          </button>
+          <button id="zenExitBtn" class="btn-zen-icon" title="집중 모드 종료">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Zen Center Stage -->
+      <div class="zen-center-stage">
+        <!-- Session Badge -->
+        <div class="zen-session-badge" id="zenSessionBadge">
+          <span class="badge-dot"></span>
+          <span id="zenSessionBadgeText">🔥 25분 집중 세션</span>
+        </div>
+
+        <!-- Task Title in Focus -->
+        <h2 class="zen-task-title" id="zenTaskTitle">선택된 할 일 작업명</h2>
+        <div class="zen-task-meta" id="zenTaskMeta">
+          <span class="zen-category-pill" id="zenCategoryPill">💼 업무</span>
+          <span class="zen-priority-pill" id="zenPriorityPill">🔥 High Priority</span>
+        </div>
+
+        <!-- Massive Circular SVG Countdown Timer -->
+        <div class="circular-timer-wrapper">
+          <svg class="circular-timer-svg" width="340" height="340" viewBox="0 0 340 340">
+            <!-- Background Track Circle -->
+            <circle class="timer-track" cx="170" cy="170" r="145"></circle>
+            <!-- Animated Progress Circle -->
+            <circle class="timer-progress" id="zenTimerProgressRing" cx="170" cy="170" r="145"></circle>
+          </svg>
+
+          <!-- Inside Timer Content -->
+          <div class="timer-inner-content">
+            <div class="timer-digits" id="zenTimerDigits">25:00</div>
+            <div class="timer-subtext" id="zenTimerSubtext">호흡을 가다듬고 몰입하세요</div>
+          </div>
+        </div>
+
+        <!-- Pomodoro Session Dots (e.g. 🍅🍅⚪️⚪️) -->
+        <div class="zen-pomo-dots" id="zenPomoDots">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Main Timer Controls -->
+        <div class="zen-controls-bar">
+          <button id="zenResetBtn" class="btn-zen-secondary" title="이 세션 다시 시작">
+            <i data-lucide="rotate-ccw"></i>
+            <span>초기화</span>
+          </button>
+
+          <button id="zenMainToggleBtn" class="btn-zen-primary" title="타이머 시작/일시정지">
+            <i data-lucide="play" id="zenMainToggleIcon"></i>
+            <span id="zenMainToggleText">집중 시작</span>
+          </button>
+
+          <button id="zenSkipBtn" class="btn-zen-secondary" title="다음 휴식/집중으로 건너뛰기">
+            <i data-lucide="skip-forward"></i>
+            <span>건너뛰기</span>
+          </button>
+        </div>
+
+        <!-- Quick Subtask Checklist in Zen View -->
+        <div class="zen-subtasks-card" id="zenSubtasksCard">
+          <div class="zen-subtasks-header">
+            <span>체크리스트</span>
+            <span id="zenSubtaskProgress">0/0</span>
+          </div>
+          <div class="zen-subtasks-list" id="zenSubtaskList">
+            <!-- Dynamic Subtasks -->
+          </div>
+          <div class="zen-subtask-quick-add">
+            <input type="text" id="zenQuickSubtaskInput" placeholder="+ 하위 작업 바로 추가...">
+          </div>
+        </div>
+
+        <!-- Complete Task directly in Zen view -->
+        <div class="zen-complete-task-row">
+          <button id="zenCompleteTaskBtn" class="btn-zen-complete">
+            <i data-lucide="check-circle-2"></i>
+            <span>이 할 일 완료하기</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- [오버레이 1] 할 일 상세 및 메모 서랍 (Task Detail Drawer)     -->
+    <!-- ============================================================ -->
+    <div class="drawer-backdrop hide" id="drawerBackdrop"></div>
+    <aside class="task-detail-drawer hide" id="taskDetailDrawer">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <i data-lucide="file-edit" class="drawer-icon"></i>
+          <span class="drawer-title">할 일 상세 설정</span>
+        </div>
+        <button id="closeDrawerBtn" class="btn-icon" aria-label="닫기"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- Edit Title -->
+        <div class="form-group">
+          <label for="drawerTaskTitle" class="form-label">작업명</label>
+          <input type="text" id="drawerTaskTitle" class="form-input">
+        </div>
+
+        <!-- Priority & Category -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="drawerPriority" class="form-label">우선순위</label>
+            <select id="drawerPriority" class="form-select">
+              <option value="high">긴급 (High) 🔥</option>
+              <option value="medium">보통 (Medium)</option>
+              <option value="low">낮음 (Low)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="drawerCategory" class="form-label">카테고리</label>
+            <select id="drawerCategory" class="form-select">
+              <!-- Dynamic Categories -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Due Date & Target Pomodoros -->
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="drawerDueDate" class="form-label">마감일</label>
+            <input type="date" id="drawerDueDate" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="drawerTargetPomo" class="form-label">목표 뽀모도로</label>
+            <select id="drawerTargetPomo" class="form-select">
+              <option value="1">🍅 1개 (25분)</option>
+              <option value="2">🍅 2개 (50분)</option>
+              <option value="3">🍅 3개 (75분)</option>
+              <option value="4">🍅 4개 (100분)</option>
+              <option value="6">🍅 6개 (150분)</option>
+              <option value="8">🍅 8개 (200분)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Pomodoro Progress Stats in Drawer -->
+        <div class="drawer-pomo-status">
+          <div class="pomo-status-left">
+            <span class="pomo-status-title">완료된 집중 세션</span>
+            <span class="pomo-status-count" id="drawerCompletedPomoText">🍅 2 / 4 세션 (50분 완료)</span>
+          </div>
+          <button id="drawerStartPomoBtn" class="btn-primary-coral btn-sm">
+            <i data-lucide="play"></i>
+            <span>집중 시작</span>
+          </button>
+        </div>
+
+        <!-- Detailed Notes / Memo -->
+        <div class="form-group">
+          <label for="drawerNotes" class="form-label">상세 메모 / 체크포인트</label>
+          <textarea id="drawerNotes" class="form-textarea" rows="4" placeholder="작업에 필요한 링크, 생각, 참고 자료를 적어두세요..."></textarea>
+        </div>
+
+        <!-- Subtasks Section -->
+        <div class="form-group">
+          <div class="subtasks-label-row">
+            <label class="form-label">하위 작업 체크리스트</label>
+            <span class="subtasks-count" id="drawerSubtasksCount">0/0 완료</span>
+          </div>
+          <div class="drawer-subtasks-list" id="drawerSubtasksList">
+            <!-- Dynamic Subtasks -->
+          </div>
+          <div class="add-subtask-row">
+            <input type="text" id="newSubtaskInput" class="form-input-sm" placeholder="하위 작업 추가 (Enter)...">
+            <button id="addSubtaskBtn" class="btn-secondary-sm"><i data-lucide="plus"></i></button>
+          </div>
+        </div>
+
+        <!-- Delete Task Button -->
+        <div class="drawer-footer-actions">
+          <button id="drawerDeleteTaskBtn" class="btn-danger-outline">
+            <i data-lucide="trash-2"></i>
+            <span>이 할 일 삭제</span>
+          </button>
+          <button id="drawerSaveBtn" class="btn-primary-coral">
+            <i data-lucide="save"></i>
+            <span>변경사항 저장</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============================================================ -->
+    <!-- [오버레이 2] 설정 및 데이터 관리 모달 (Settings Modal)       -->
+    <!-- ============================================================ -->
+    <div class="modal-backdrop hide" id="settingsModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <i data-lucide="sliders" class="modal-icon"></i>
+            <span class="modal-title">환경설정 & 데이터 관리</span>
+          </div>
+          <button id="closeSettingsModalBtn" class="btn-icon" aria-label="닫기"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Pomodoro Duration Config -->
+          <div class="settings-group">
+            <h4 class="settings-group-title">⏱️ 뽀모도로 시간 커스텀 (분 단위)</h4>
+            <div class="settings-grid-3">
+              <div class="settings-item">
+                <label for="cfgFocusDuration" class="settings-label">집중 시간</label>
+                <div class="number-input-wrap">
+                  <input type="number" id="cfgFocusDuration" min="5" max="90" value="25" class="settings-num-input">
+                  <span class="unit">분</span>
+                </div>
+              </div>
+              <div class="settings-item">
+                <label for="cfgShortBreak" class="settings-label">짧은 휴식</label>
+                <div class="number-input-wrap">
+                  <input type="number" id="cfgShortBreak" min="1" max="30" value="5" class="settings-num-input">
+                  <span class="unit">분</span>
+                </div>
+              </div>
+              <div class="settings-item">
+                <label for="cfgLongBreak" class="settings-label">긴 휴식 (4회 후)</label>
+                <div class="number-input-wrap">
+                  <input type="number" id="cfgLongBreak" min="5" max="60" value="15" class="settings-num-input">
+                  <span class="unit">분</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sound & Notifications -->
+          <div class="settings-group">
+            <h4 class="settings-group-title">🔔 알림 및 오디오</h4>
+            <div class="settings-toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">타이머 완료 챠임벨 사운드</span>
+                <span class="toggle-desc">세션 종료 시 편안한 차임벨 소리를 재생합니다 (Web Audio 합성)</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfgSoundEnabled" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="sound-test-row">
+              <button id="testSoundBtn" class="btn-secondary-sm">
+                <i data-lucide="volume-2"></i>
+                <span>챠임벨 사운드 미리듣기</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Data Management -->
+          <div class="settings-group">
+            <h4 class="settings-group-title">💾 데이터 백업 및 복구</h4>
+            <p class="settings-desc">모든 데이터는 브라우저 LocalStorage에 안전하게 저장됩니다. 다른 기기로 옮기거나 백업할 수 있습니다.</p>
+            <div class="data-actions-row">
+              <button id="exportDataBtn" class="btn-secondary-sm">
+                <i data-lucide="download"></i>
+                <span>JSON 데이터 내보내기</span>
+              </button>
+              <label for="importDataInput" class="btn-secondary-sm cursor-pointer">
+                <i data-lucide="upload"></i>
+                <span>JSON 데이터 가져오기</span>
+              </label>
+              <input type="file" id="importDataInput" accept=".json" class="hide">
+              <button id="resetDataBtn" class="btn-danger-outline-sm">
+                <i data-lucide="refresh-cw"></i>
+                <span>샘플 데이터로 초기화</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="saveSettingsBtn" class="btn-primary-coral">
+            <span>설정 저장</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Add Modal -->
+    <div class="modal-backdrop hide" id="categoryModal">
+      <div class="modal-card modal-card-sm">
+        <div class="modal-header">
+          <span class="modal-title">새 카테고리 추가</span>
+          <button id="closeCategoryModalBtn" class="btn-icon"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newCategoryName" class="form-label">카테고리 이름</label>
+            <input type="text" id="newCategoryName" class="form-input" placeholder="예: 취미, 블로그, 독서...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">컬러 선택</label>
+            <div class="color-picker-grid" id="categoryColorPicker">
+              <!-- Colors -->
+              <button type="button" class="color-dot active" data-color="#6366F1" style="background: #6366F1;"></button>
+              <button type="button" class="color-dot" data-color="#EC4899" style="background: #EC4899;"></button>
+              <button type="button" class="color-dot" data-color="#10B981" style="background: #10B981;"></button>
+              <button type="button" class="color-dot" data-color="#F59E0B" style="background: #F59E0B;"></button>
+              <button type="button" class="color-dot" data-color="#3B82F6" style="background: #3B82F6;"></button>
+              <button type="button" class="color-dot" data-color="#8B5CF6" style="background: #8B5CF6;"></button>
+              <button type="button" class="color-dot" data-color="#14B8A6" style="background: #14B8A6;"></button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="submitNewCategoryBtn" class="btn-primary-coral">카테고리 생성</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+  </div>
+
+  <!-- Main Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
