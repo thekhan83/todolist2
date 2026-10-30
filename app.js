@@ -4,6 +4,18 @@
  */
 
 // ==========================================================================
+// 0. Supabase Cloud Sync Configuration
+// ==========================================================================
+const SUPABASE_CONFIG = {
+  url: 'https://jpysnuyndbocdclvhckh.supabase.co',
+  key: 'sb_publishable_mdYBJCGXYriH29LW6gVMhg_njcnyDLu'
+};
+
+const supabaseClient = (typeof window !== 'undefined' && window.supabase)
+  ? window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key)
+  : null;
+
+// ==========================================================================
 // 1. Initial State & Default Sample Data
 // ==========================================================================
 const DEFAULT_CATEGORIES = [
@@ -116,7 +128,11 @@ class TaskStore {
       STATS: 'taskflow_stats'
     };
 
+    this._syncTimer = null;
+    this.onSync = null;
+
     this.loadState();
+    this.initSupabaseSync();
   }
 
   loadState() {
@@ -143,8 +159,61 @@ class TaskStore {
     }
   }
 
-  saveTasks() {
+  async initSupabaseSync() {
+    if (!supabaseClient) return;
+    try {
+      const { data, error } = await supabaseClient
+        .from('tasks')
+        .select('*')
+        .order('createdAt', { ascending: false });
+
+      if (error) {
+        console.warn('[Supabase Sync Notice]:', error.message);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        this.tasks = data;
+        localStorage.setItem(this.STORAGE_KEYS.TASKS, JSON.stringify(this.tasks));
+        if (typeof this.onSync === 'function') {
+          this.onSync();
+        }
+      } else if (this.tasks && this.tasks.length > 0) {
+        await supabaseClient.from('tasks').upsert(this.tasks);
+      }
+    } catch (err) {
+      console.warn('[Supabase Sync Error]:', err);
+    }
+  }
+
+  saveTasks(syncToCloud = true) {
     localStorage.setItem(this.STORAGE_KEYS.TASKS, JSON.stringify(this.tasks));
+    if (syncToCloud) {
+      this.syncDebouncedToSupabase();
+    }
+  }
+
+  syncDebouncedToSupabase() {
+    if (!supabaseClient) return;
+    if (this._syncTimer) clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(async () => {
+      try {
+        if (this.tasks && this.tasks.length > 0) {
+          await supabaseClient.from('tasks').upsert(this.tasks);
+        }
+      } catch (err) {
+        console.warn('[Supabase Upsert Error]:', err);
+      }
+    }, 300);
+  }
+
+  async deleteFromSupabase(id) {
+    if (!supabaseClient) return;
+    try {
+      await supabaseClient.from('tasks').delete().eq('id', id);
+    } catch (err) {
+      console.warn('[Supabase Delete Error]:', err);
+    }
   }
 
   saveCategories() {
@@ -191,7 +260,8 @@ class TaskStore {
 
   deleteTask(id) {
     this.tasks = this.tasks.filter(t => t.id !== id);
-    this.saveTasks();
+    this.saveTasks(false);
+    this.deleteFromSupabase(id);
   }
 
   toggleTaskCompleted(id) {
@@ -205,8 +275,12 @@ class TaskStore {
   }
 
   clearCompletedTasks() {
+    const completedIds = this.tasks.filter(t => t.completed).map(t => t.id);
     this.tasks = this.tasks.filter(t => !t.completed);
-    this.saveTasks();
+    this.saveTasks(false);
+    if (supabaseClient && completedIds.length > 0) {
+      supabaseClient.from('tasks').delete().in('id', completedIds).then();
+    }
   }
 
   incrementTaskPomo(id, minutes = 25) {
@@ -486,6 +560,12 @@ class PomodoroEngine {
 class TaskFlowApp {
   constructor() {
     this.store = new TaskStore();
+    this.store.onSync = () => {
+      this.renderAll();
+      if (typeof this.showToast === 'function') {
+        this.showToast('클라우드 데이터 동기화 완료 ☁️');
+      }
+    };
     this.soundSynth = new SoundSynthesizer();
     this.currentFilter = 'all';
     this.currentCategoryFilter = null;
